@@ -1,6 +1,9 @@
 package optimizer
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/everglowlabs/codedna/internal/parser"
 	"github.com/everglowlabs/codedna/internal/schema"
 )
@@ -45,18 +48,27 @@ func (o *Optimizer) SelectGoldenSamples(clusters map[string][]parser.CodeBlock) 
 
 // TrimPayload ensures the total content doesn't exceed token limits.
 // This is a placeholder for more advanced token-aware trimming.
-func (o *Optimizer) TrimPayload(samples []schema.Sample) []schema.Sample {
-	totalChars := 0
-	maxChars := o.MaxTokens * 4 // Rough estimate: 4 chars per token
-
-	var trimmed []schema.Sample
-	for _, s := range samples {
-		if totalChars+len(s.Content) > maxChars {
-			break
-		}
-		trimmed = append(trimmed, s)
-		totalChars += len(s.Content)
+// GenerateDNA creates a full DNA_Schema from samples.
+func (o *Optimizer) GenerateDNA(projectName string, samples []schema.Sample) schema.DNA_Schema {
+	dna := schema.DNA_Schema{
+		ProjectName: projectName,
+		Version:     "0.1.0",
+		GeneratedAt: time.Now(),
+		Standards:   []schema.Standard{},
 	}
 
-	return trimmed
+	// Group samples by some category (mocked for now)
+	for i, s := range samples {
+		std := schema.Standard{
+			ID:          fmt.Sprintf("STD-%d", i),
+			Title:       fmt.Sprintf("Pattern Detected in %s", s.FilePath),
+			Category:    "General",
+			Rationale:   "Automatically extracted from codebase structure.",
+			Samples:     []schema.Sample{s},
+			Rules:       []string{"Follow the structural pattern demonstrated in the sample."},
+		}
+		dna.Standards = append(dna.Standards, std)
+	}
+
+	return dna
 }

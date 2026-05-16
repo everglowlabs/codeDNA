@@ -19,9 +19,9 @@ CodeDNA is a forensic tool designed to ingest an existing codebase, extract impl
 | Category | Supported Targets |
 | :--- | :--- |
 | **Languages** | Go, TypeScript, Python (Coming Soon), Rust (Coming Soon) |
-| **IDEs** | Cursor, VS Code, JetBrains (via Continue.dev) |
-| **AI Agents** | Antigravity, GitHub Copilot, Claude Dev, Continue.dev |
-| **Rule Formats** | `.cursorrules`, `.github/copilot-instructions.md`, `CLAUDE.md` |
+| **IDEs** | Cursor, VS Code, JetBrains, Windsurf, Claude Code |
+| **AI Agents** | Antigravity, Copilot, Claude, Cursor, Continue, Windsurf, JetBrains AI |
+| **Rule Formats** | Modular Rules (`.agents/`, `.github/`, `.claude/`, `.cursor/`, `.continue/`, `.windsurf/`, `.aiassistant/`) |
 
 ## 📦 Installation
 

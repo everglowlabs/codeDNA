@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 
 	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbles/spinner"
@@ -11,6 +12,7 @@ import (
 	"github.com/everglowlabs/codedna/internal/optimizer"
 	"github.com/everglowlabs/codedna/internal/parser"
 	"github.com/everglowlabs/codedna/internal/scanner"
+	"github.com/everglowlabs/codedna/internal/schema"
 )
 
 type scanStep int
@@ -35,6 +37,7 @@ type model struct {
 	logs          []string
 	width         int
 	height        int
+	Result        schema.DNA_Schema // Final result
 }
 
 func InitialModel(path string) model {
@@ -110,8 +113,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case clusteringFinishedMsg:
 		m.step = done
-		m.logs = append(m.logs, fmt.Sprintf("Clustered into %d patterns", msg.numClusters))
-		m.logs = append(m.logs, fmt.Sprintf("Selected %d golden samples", msg.numSamples))
+		m.Result = msg.dna
+		m.logs = append(m.logs, fmt.Sprintf("Clustered into %d patterns", len(msg.dna.Standards)))
+		m.logs = append(m.logs, "Selected golden samples for all patterns")
 		return m, m.progress.SetPercent(1.0)
 	case logMsg:
 		m.logs = append(m.logs, msg.text)
@@ -123,14 +127,20 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func (m model) GetResult() schema.DNA_Schema {
+	return m.Result
+}
+
 func (m model) parseFiles(files []string) tea.Cmd {
 	return func() tea.Msg {
-		p := parser.NewGoParser()
 		var allBlocks []parser.CodeBlock
 		for _, f := range files {
-			// Notify UI of file being parsed for progress
-			// Note: This requires a bit of a trick in standard tea.Cmd
-			// For simplicity, we'll just parse and then cluster
+			ext := filepath.Ext(f)
+			p := parser.NewParser(ext)
+			if p == nil {
+				continue
+			}
+
 			blocks, err := p.ExtractBlocks(f)
 			if err == nil {
 				allBlocks = append(allBlocks, blocks...)
@@ -157,10 +167,10 @@ func (m model) parseFiles(files []string) tea.Cmd {
 		// Select golden samples
 		opt := optimizer.NewOptimizer(4096)
 		samples := opt.SelectGoldenSamples(clusters)
+		dna := opt.GenerateDNA("Project", samples)
 
 		return clusteringFinishedMsg{
-			numClusters: len(clusters),
-			numSamples:  len(samples),
+			dna: dna,
 		}
 	}
 }
@@ -173,8 +183,7 @@ func dummyEmbedder(ctx context.Context, text string) ([]float32, error) {
 }
 
 type clusteringFinishedMsg struct {
-	numClusters int
-	numSamples  int
+	dna schema.DNA_Schema
 }
 
 type scanFinishedMsg struct {

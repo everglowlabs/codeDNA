@@ -7,21 +7,65 @@ import (
 
 	sitter "github.com/smacker/go-tree-sitter"
 	"github.com/smacker/go-tree-sitter/golang"
+	"github.com/smacker/go-tree-sitter/javascript"
+	"github.com/smacker/go-tree-sitter/python"
+	"github.com/smacker/go-tree-sitter/typescript/typescript"
 )
 
 type Parser struct {
 	Language *sitter.Language
+	Query    string
+}
+
+func NewParser(ext string) *Parser {
+	switch ext {
+	case ".go":
+		return &Parser{
+			Language: golang.GetLanguage(),
+			Query: `
+				(function_declaration) @func
+				(method_declaration) @method
+			`,
+		}
+	case ".py":
+		return &Parser{
+			Language: python.GetLanguage(),
+			Query: `
+				(function_definition) @func
+				(class_definition) @class
+			`,
+		}
+	case ".ts", ".tsx":
+		return &Parser{
+			Language: typescript.GetLanguage(),
+			Query: `
+				(function_declaration) @func
+				(method_definition) @method
+				(interface_declaration) @interface
+				(class_declaration) @class
+			`,
+		}
+	case ".js":
+		return &Parser{
+			Language: javascript.GetLanguage(),
+			Query: `
+				(function_declaration) @func
+				(method_definition) @method
+				(class_declaration) @class
+			`,
+		}
+	default:
+		return nil
+	}
 }
 
 func NewGoParser() *Parser {
-	return &Parser{
-		Language: golang.GetLanguage(),
-	}
+	return NewParser(".go")
 }
 
 type CodeBlock struct {
 	Content  string
-	Kind     string // e.g., "function", "interface", "method"
+	Kind     string // e.g., "function", "interface", "method", "class"
 	FilePath string
 }
 
@@ -41,12 +85,7 @@ func (p *Parser) ExtractBlocks(path string) ([]CodeBlock, error) {
 
 	n := tree.RootNode()
 
-	// Query to find function and method declarations
-	queryStr := `
-		(function_declaration) @func
-		(method_declaration) @method
-	`
-	q, err := sitter.NewQuery([]byte(queryStr), p.Language)
+	q, err := sitter.NewQuery([]byte(p.Query), p.Language)
 	if err != nil {
 		return nil, err
 	}
@@ -61,10 +100,19 @@ func (p *Parser) ExtractBlocks(path string) ([]CodeBlock, error) {
 			break
 		}
 		for _, c := range m.Captures {
-			kind := "function"
-			if q.CaptureNameForId(c.Index) == "method" {
+			kind := q.CaptureNameForId(c.Index)
+			// Map internal capture names to user-friendly kinds
+			switch kind {
+			case "func":
+				kind = "function"
+			case "method":
 				kind = "method"
+			case "class":
+				kind = "class"
+			case "interface":
+				kind = "interface"
 			}
+
 			blocks = append(blocks, CodeBlock{
 				Content:  c.Node.Content(content),
 				Kind:     kind,

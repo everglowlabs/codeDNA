@@ -36,9 +36,13 @@ To ensure the tool is extremely fast, easily distributable as a single binary, a
 
 ## 4. Target Output Formats (Native IDE Integration)
 CodeDNA acts as a "Universal Rule Translator":
-*   **Cursor / Antigravity:** `.cursorrules` (Root-level rule enforcement).
-*   **VS Code / GitHub Copilot:** `.github/copilot-instructions.md`.
-*   **Custom Agents / Continue.dev:** `CLAUDE.md` or `DEVELOPER.md`.
+*   **Antigravity:** `.agents/rules/*.md` (Modular rule enforcement with char capping).
+*   **Cursor:** `.cursor/rules/*.mdc` (Modern modular format with glob scoping).
+*   **GitHub Copilot:** `.github/instructions/*.instructions.md` (Path-specific instructions).
+*   **Claude Code:** `.claude/rules/*.md` and lean `CLAUDE.md`.
+*   **Continue.dev:** `.continue/rules/*.md` (Native modular rules).
+*   **Windsurf Cascade:** `.windsurf/rules/*.md` (Glob-based triggers).
+*   **JetBrains AI:** `.aiassistant/rules/*.md` (YAML-scoped rules).
 *   **Internal Knowledge Base:** Markdown-formatted engineering standards for human onboarding.
 
 ---
@@ -71,15 +75,15 @@ The TUI is designed to feel like a high-end forensic tool.
 *   **[x] Tree-sitter Integration:** Setup Go and TypeScript parsers to extract basic function signatures and interface definitions.
 *   **[x] Filter Logic:** Robust `.gitignore` awareness to prevent scanning noise.
 
-### Phase 2: Intelligence & Extraction (Week 2)
-*   **Pattern Clustering:** Use local embeddings to group similar code blocks (e.g., all HTTP handlers).
-*   **Context Payload Generation:** Smart selection of representative files to stay within LLM token limits while maximizing context density.
-*   **JSON Schema Definition:** Establish the `DNA_Schema` for internal rule representation.
+### Phase 2: Intelligence & Extraction (Week 2) [COMPLETED]
+*   **[x] Pattern Clustering:** Use local embeddings to group similar code blocks (e.g., all HTTP handlers).
+*   **[x] Context Payload Generation:** Smart selection of representative files to stay within LLM token limits while maximizing context density.
+*   **[x] JSON Schema Definition:** Establish the `DNA_Schema` for internal rule representation.
 
-### Phase 3: Validation & Output (Week 3)
-*   **The "Rule Sandbox":** Have the LLM generate a dummy file following the new rules. If the local parser detects a deviation from existing project AST patterns, the rule is refined.
-*   **Multi-Format Compilers:** Implementation of Cursor, Copilot, and Markdown exporters.
-*   **CI/CD Integration:** A "Lint" mode that checks if new PRs violate the generated `CodeDNA`.
+### Phase 3: Validation & Output (Week 3) [COMPLETED]
+*   **[x] The "Rule Sandbox":** Have the LLM generate a dummy file following the new rules. If the local parser detects a deviation from existing project AST patterns, the rule is refined.
+*   **[x] Multi-Format Compilers:** Implementation of modular exporters for Cursor, Copilot, Antigravity, Claude, Continue, Windsurf, and JetBrains.
+*   **[x] CI/CD Integration:** A "Lint" mode that checks if new PRs violate the generated `CodeDNA`.
 
 ---
 
