@@ -62,7 +62,7 @@ func (m model) View() string {
 	// Sidebar: Engineering DNA Summary
 	var sidebarBuilder strings.Builder
 	sidebarBuilder.WriteString(dnaStyle.Render("ENGINEERING DNA") + "\n\n")
-	
+
 	if len(m.patternsFound) > 0 {
 		for _, p := range m.patternsFound {
 			fmt.Fprintf(&sidebarBuilder, " %s %s\n", successStyle.Render("✔"), p)
@@ -74,7 +74,8 @@ func (m model) View() string {
 	}
 
 	if m.step == done {
-		sidebarBuilder.WriteString("\n" + lipgloss.NewStyle().Foreground(lipgloss.Color("#FFCC00")).Bold(true).Render("SUMMARY") + "\n")
+		sidebarBuilder.WriteString(
+			"\n" + lipgloss.NewStyle().Foreground(lipgloss.Color("#FFCC00")).Bold(true).Render("SUMMARY") + "\n")
 		fmt.Fprintf(&sidebarBuilder, " Files: %d\n", m.totalFiles)
 		fmt.Fprintf(&sidebarBuilder, " Patterns: %d\n", len(m.patternsFound))
 	}
@@ -119,11 +120,11 @@ func (m model) View() string {
 	}
 
 	statusView := footerStyle.Background(statusColor).Render(status)
-	
+
 	// Progress bar with fixed width
 	m.progress.Width = m.width / 2
 	progressBar := m.progress.View()
-	
+
 	footer := lipgloss.JoinHorizontal(lipgloss.Center,
 		statusView,
 		"  ",

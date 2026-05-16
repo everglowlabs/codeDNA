@@ -1,11 +1,11 @@
+version: "2"
 run:
-  timeout: 5m
   tests: true
-
 linters:
-  disable-all: true
+  default: none
   enable:
     - bodyclose
+    - copyloopvar
     - depguard
     - dogsled
     - dupl
@@ -20,50 +20,59 @@ linters:
     - nakedret
     - revive
     - staticcheck
-    - copyloopvar
     - unconvert
     - unparam
     - unused
-
-linters-settings:
-  depguard:
+  settings:
+    depguard:
+      rules:
+        main:
+          list-mode: lax
+          files:
+            - $all
+          allow:
+            - $gostd
+            - github.com/everglowlabs/codedna
+            - github.com/spf13/cobra
+            - github.com/charmbracelet
+            - github.com/smacker/go-tree-sitter
+            - github.com/sabhiram/go-gitignore
+    dupl:
+      threshold: 100
+    goconst:
+      min-len: 3
+      min-occurrences: 3
+    gocyclo:
+      min-complexity: 15
+    govet:
+      enable:
+        - shadow
+    lll:
+      line-length: 120
+    misspell:
+      locale: US
+    revive:
+      severity: warning
+  exclusions:
+    generated: lax
     rules:
-      main:
-        list-mode: lax # Allow everything except explicitly denied
-        files:
-          - "$all"
-        allow:
-          - $gostd
-          - github.com/everglowlabs/codedna
-          - github.com/spf13/cobra
-          - github.com/charmbracelet
-          - github.com/smacker/go-tree-sitter
-          - github.com/sabhiram/go-gitignore
-  dupl:
-    threshold: 100
-  goconst:
-    min-len: 3
-    min-occurrences: 3
-  gocyclo:
-    min-complexity: 15
-  govet:
-    enable:
-      - shadow
-  lll:
-    line-length: 120
-  misspell:
-    locale: US
-  revive:
-    severity: warning
-
+      - linters:
+          - gosec
+        path: _test\.go
+      - linters:
+          - gosec
+        text: G304
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
 issues:
-  exclude-use-default: false
   max-issues-per-linter: 0
   max-same-issues: 0
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - gosec
-    - linters:
-        - gosec
-      text: "G304" # Potential file inclusion via variable. This is a CLI tool, it's expected.
+formatters:
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

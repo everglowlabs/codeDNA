@@ -3,6 +3,7 @@ package cluster
 import (
 	"context"
 	"fmt"
+
 	"github.com/everglowlabs/codedna/internal/parser"
 	"github.com/philippgille/chromem-go"
 )
@@ -62,7 +63,8 @@ func (cm *ClusterManager) FindSimilar(ctx context.Context, content string, limit
 
 // GroupByPattern groups blocks by their semantic similarity.
 // This is a simplified version of clustering for Phase 2.
-func (cm *ClusterManager) GroupByPattern(ctx context.Context, blocks []parser.CodeBlock) (map[string][]parser.CodeBlock, error) {
+func (cm *ClusterManager) GroupByPattern(
+	ctx context.Context, blocks []parser.CodeBlock) (map[string][]parser.CodeBlock, error) {
 	clusters := make(map[string][]parser.CodeBlock)
 	seen := make(map[string]bool)
 
