@@ -21,15 +21,14 @@ const (
 )
 
 type model struct {
-	path            string
-	step            scanStep
-	progress        progress.Model
-	spinner         spinner.Model
-	currentFile     string
-	filesScanned    int
-	totalFiles      int
-	patternsFound   []string
-	logs            []string
+	path          string
+	step          scanStep
+	progress      progress.Model
+	spinner       spinner.Model
+	currentFile   string
+	totalFiles    int
+	patternsFound []string
+	logs          []string
 }
 
 func InitialModel(path string) model {

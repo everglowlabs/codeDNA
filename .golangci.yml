@@ -1,8 +1,9 @@
-version: "2"
 run:
+  timeout: 5m
   tests: true
+
 linters:
-  default: none
+  disable-all: true
   enable:
     - bodyclose
     - depguard
@@ -19,48 +20,50 @@ linters:
     - nakedret
     - revive
     - staticcheck
+    - copyloopvar
     - unconvert
     - unparam
     - unused
-  settings:
-    dupl:
-      threshold: 100
-    goconst:
-      min-len: 3
-      min-occurrences: 3
-    gocyclo:
-      min-complexity: 15
-    govet:
-      enable:
-        - shadow
-    lll:
-      line-length: 120
-    misspell:
-      locale: US
-    revive:
-      severity: warning
-  exclusions:
-    generated: lax
-    paths:
-      - vendor
-      - third_party$
-      - builtin$
-      - examples$
+
+linters-settings:
+  depguard:
+    rules:
+      main:
+        list-mode: lax # Allow everything except explicitly denied
+        files:
+          - "$all"
+        allow:
+          - $gostd
+          - github.com/everglowlabs/codedna
+          - github.com/spf13/cobra
+          - github.com/charmbracelet
+          - github.com/smacker/go-tree-sitter
+          - github.com/sabhiram/go-gitignore
+  dupl:
+    threshold: 100
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+  gocyclo:
+    min-complexity: 15
+  govet:
+    enable:
+      - shadow
+  lll:
+    line-length: 120
+  misspell:
+    locale: US
+  revive:
+    severity: warning
+
 issues:
+  exclude-use-default: false
   max-issues-per-linter: 0
   max-same-issues: 0
-formatters:
-  enable:
-    - gofmt
-    - goimports
-  settings:
-    goimports:
-      local-prefixes:
-        - github.com/everglowlabs/codedna
-  exclusions:
-    generated: lax
-    paths:
-      - vendor
-      - third_party$
-      - builtin$
-      - examples$
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - gosec
+    - linters:
+        - gosec
+      text: "G304" # Potential file inclusion via variable. This is a CLI tool, it's expected.

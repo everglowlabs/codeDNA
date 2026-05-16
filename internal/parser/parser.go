@@ -3,6 +3,7 @@ package parser
 import (
 	"context"
 	"os"
+	"path/filepath"
 
 	sitter "github.com/smacker/go-tree-sitter"
 	"github.com/smacker/go-tree-sitter/golang"
@@ -19,7 +20,7 @@ func NewGoParser() *Parser {
 }
 
 func (p *Parser) ExtractFunctions(path string) ([]string, error) {
-	content, err := os.ReadFile(path)
+	content, err := os.ReadFile(filepath.Clean(path))
 	if err != nil {
 		return nil, err
 	}
@@ -33,7 +34,7 @@ func (p *Parser) ExtractFunctions(path string) ([]string, error) {
 	}
 
 	n := tree.RootNode()
-	
+
 	// Very basic query to find function declarations
 	queryStr := `(function_declaration name: (identifier) @func.name)`
 	q, err := sitter.NewQuery([]byte(queryStr), p.Language)

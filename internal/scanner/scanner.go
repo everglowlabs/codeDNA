@@ -19,7 +19,7 @@ func NewScanner(root string) *Scanner {
 
 func (s *Scanner) Scan(onFile func(path string, total int)) ([]string, error) {
 	var files []string
-	
+
 	// First pass to count total supported files
 	var total int
 	_ = filepath.Walk(s.Root, func(path string, info os.FileInfo, err error) error {
