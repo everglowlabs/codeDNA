@@ -1,11 +1,14 @@
 package tui
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/everglowlabs/codedna/internal/cluster"
+	"github.com/everglowlabs/codedna/internal/optimizer"
 	"github.com/everglowlabs/codedna/internal/parser"
 	"github.com/everglowlabs/codedna/internal/scanner"
 )
@@ -25,10 +28,13 @@ type model struct {
 	step          scanStep
 	progress      progress.Model
 	spinner       spinner.Model
-	currentFile   string
-	totalFiles    int
-	patternsFound []string
+	currentFile    string
+	totalFiles     int
+	processedFiles int
+	patternsFound  []string
 	logs          []string
+	width         int
+	height        int
 }
 
 func InitialModel(path string) model {
@@ -46,6 +52,7 @@ func (m model) Init() tea.Cmd {
 	return tea.Batch(
 		m.spinner.Tick,
 		m.startScan(),
+		tea.EnterAltScreen,
 	)
 }
 
@@ -81,14 +88,31 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.progress = p
 		}
 		return m, cmd
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		m.height = msg.Height
+		return m, nil
 	case scanFinishedMsg:
 		m.step = parsingAST
 		m.totalFiles = len(msg.files)
 		m.logs = append(m.logs, fmt.Sprintf("Found %d files to analyze", m.totalFiles))
-		return m, m.parseFiles(msg.files)
+		return m, tea.Batch(
+			m.progress.SetPercent(0.2), // 20% done after scanning
+			m.parseFiles(msg.files),
+		)
+	case fileParsedMsg:
+		m.processedFiles++
+		m.currentFile = msg.file
+		percent := 0.2 + (float64(m.processedFiles)/float64(m.totalFiles))*0.6 // 20% to 80% for parsing
+		return m, m.progress.SetPercent(percent)
 	case patternFoundMsg:
 		m.patternsFound = append(m.patternsFound, msg.pattern)
 		return m, nil
+	case clusteringFinishedMsg:
+		m.step = done
+		m.logs = append(m.logs, fmt.Sprintf("Clustered into %d patterns", msg.numClusters))
+		m.logs = append(m.logs, fmt.Sprintf("Selected %d golden samples", msg.numSamples))
+		return m, m.progress.SetPercent(1.0)
 	case logMsg:
 		m.logs = append(m.logs, msg.text)
 		if len(m.logs) > 5 {
@@ -102,14 +126,55 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m model) parseFiles(files []string) tea.Cmd {
 	return func() tea.Msg {
 		p := parser.NewGoParser()
+		var allBlocks []parser.CodeBlock
 		for _, f := range files {
-			funcs, err := p.ExtractFunctions(f)
-			if err == nil && len(funcs) > 0 {
-				return patternFoundMsg{pattern: fmt.Sprintf("Functions in %s: %d", f, len(funcs))}
+			// Notify UI of file being parsed for progress
+			// Note: This requires a bit of a trick in standard tea.Cmd
+			// For simplicity, we'll just parse and then cluster
+			blocks, err := p.ExtractBlocks(f)
+			if err == nil {
+				allBlocks = append(allBlocks, blocks...)
 			}
 		}
-		return logMsg{text: "AST Analysis complete"}
+
+		// Now clustering
+		cm, err := cluster.NewClusterManager("dna", dummyEmbedder)
+		if err != nil {
+			return logMsg{text: fmt.Sprintf("Cluster error: %v", err)}
+		}
+
+		ctx := context.Background()
+		err = cm.AddBlocks(ctx, allBlocks)
+		if err != nil {
+			return logMsg{text: fmt.Sprintf("Add blocks error: %v", err)}
+		}
+
+		clusters, err := cm.GroupByPattern(ctx, allBlocks)
+		if err != nil {
+			return logMsg{text: fmt.Sprintf("Grouping error: %v", err)}
+		}
+
+		// Select golden samples
+		opt := optimizer.NewOptimizer(4096)
+		samples := opt.SelectGoldenSamples(clusters)
+
+		return clusteringFinishedMsg{
+			numClusters: len(clusters),
+			numSamples:  len(samples),
+		}
 	}
+}
+
+func dummyEmbedder(ctx context.Context, text string) ([]float32, error) {
+	res := make([]float32, 384)
+	// Simple normalization: first element is 1, others 0
+	res[0] = 1.0
+	return res, nil
+}
+
+type clusteringFinishedMsg struct {
+	numClusters int
+	numSamples  int
 }
 
 type scanFinishedMsg struct {
@@ -118,6 +183,10 @@ type scanFinishedMsg struct {
 
 type patternFoundMsg struct {
 	pattern string
+}
+
+type fileParsedMsg struct {
+	file string
 }
 
 type logMsg struct {

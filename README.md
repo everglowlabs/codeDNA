@@ -12,12 +12,16 @@ CodeDNA is a forensic tool designed to ingest an existing codebase, extract impl
 - **Multi-Target Export:** Generates optimized rules for Cursor, VS Code, GitHub Copilot, and Continue.dev.
 - **Premium TUI:** A sleek, high-end terminal interface for real-time extraction monitoring.
 
-## 🛠 Tech Stack
-
-- **Core:** Go
-- **TUI:** Charmbracelet (Bubble Tea, Lipgloss)
-- **Parsing:** Tree-sitter
 - **CLI:** Cobra
+
+## 🌍 Supported Languages & Integrations
+
+| Category | Supported Targets |
+| :--- | :--- |
+| **Languages** | Go, TypeScript, Python (Coming Soon), Rust (Coming Soon) |
+| **IDEs** | Cursor, VS Code, JetBrains (via Continue.dev) |
+| **AI Agents** | Antigravity, GitHub Copilot, Claude Dev, Continue.dev |
+| **Rule Formats** | `.cursorrules`, `.github/copilot-instructions.md`, `CLAUDE.md` |
 
 ## 📦 Installation
 

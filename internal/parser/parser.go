@@ -19,7 +19,13 @@ func NewGoParser() *Parser {
 	}
 }
 
-func (p *Parser) ExtractFunctions(path string) ([]string, error) {
+type CodeBlock struct {
+	Content  string
+	Kind     string // e.g., "function", "interface", "method"
+	FilePath string
+}
+
+func (p *Parser) ExtractBlocks(path string) ([]CodeBlock, error) {
 	content, err := os.ReadFile(filepath.Clean(path))
 	if err != nil {
 		return nil, err
@@ -35,8 +41,11 @@ func (p *Parser) ExtractFunctions(path string) ([]string, error) {
 
 	n := tree.RootNode()
 
-	// Very basic query to find function declarations
-	queryStr := `(function_declaration name: (identifier) @func.name)`
+	// Query to find function and method declarations
+	queryStr := `
+		(function_declaration) @func
+		(method_declaration) @method
+	`
 	q, err := sitter.NewQuery([]byte(queryStr), p.Language)
 	if err != nil {
 		return nil, err
@@ -45,16 +54,24 @@ func (p *Parser) ExtractFunctions(path string) ([]string, error) {
 	qc := sitter.NewQueryCursor()
 	qc.Exec(q, n)
 
-	var functions []string
+	var blocks []CodeBlock
 	for {
 		m, ok := qc.NextMatch()
 		if !ok {
 			break
 		}
 		for _, c := range m.Captures {
-			functions = append(functions, c.Node.Content(content))
+			kind := "function"
+			if q.CaptureNameForId(c.Index) == "method" {
+				kind = "method"
+			}
+			blocks = append(blocks, CodeBlock{
+				Content:  c.Node.Content(content),
+				Kind:     kind,
+				FilePath: path,
+			})
 		}
 	}
 
-	return functions, nil
+	return blocks, nil
 }
