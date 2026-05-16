@@ -1,45 +1,188 @@
 # CodeDNA 🧬
 
-**Automated Engineering Standard Extraction Engine**
+> **Automated Engineering Standard Extraction Engine**
+> Scan a codebase. Extract its implicit patterns. Generate AI agent rules — automatically.
 
-CodeDNA is a forensic tool designed to ingest an existing codebase, extract implicit engineering patterns, and generate a machine-readable "constitution" (like `.cursorrules` or `CLAUDE.md`) for AI agents to follow.
+---
 
-## 🚀 Key Features
+CodeDNA forensically analyzes an existing codebase using AST-level static analysis, clusters the detected patterns semantically, and produces a machine-readable "constitution" that AI agents (Cursor, Copilot, Claude, Continue, Windsurf, JetBrains, and Antigravity) natively follow.
 
-- **AST-Powered Analysis:** Uses Tree-sitter for deep static analysis of Go, TypeScript, and more.
-- **Privacy-First:** Context scrubbing and local-first parsing ensure your proprietary logic stays on your machine.
-- **Semantic Clustering:** Identifies repeating patterns (logging, error handling, DI) using local embeddings.
-- **Multi-Target Export:** Generates optimized rules for Cursor, VS Code, GitHub Copilot, and Continue.dev.
-- **Premium TUI:** A sleek, high-end terminal interface for real-time extraction monitoring.
+Every mature project implicitly enforces standards — how errors are wrapped, how loggers are initialized, how HTTP handlers are structured. CodeDNA makes those standards **explicit** and **enforceable** in under a minute.
 
-- **CLI:** Cobra
+---
 
-## 🌍 Supported Languages & Integrations
+## Features
 
-| Category | Supported Targets |
-| :--- | :--- |
-| **Languages** | Go, TypeScript, Python (Coming Soon), Rust (Coming Soon) |
-| **IDEs** | Cursor, VS Code, JetBrains, Windsurf, Claude Code |
-| **AI Agents** | Antigravity, Copilot, Claude, Cursor, Continue, Windsurf, JetBrains AI |
-| **Rule Formats** | Modular Rules (`.agents/`, `.github/`, `.claude/`, `.cursor/`, `.continue/`, `.windsurf/`, `.aiassistant/`) |
+- **AST-Powered Analysis** — Tree-sitter parses Go, TypeScript, JavaScript, and Python at the syntax tree level. No regex heuristics.
+- **Semantic Clustering** — Local vector embeddings (`chromem-go`) group similar code blocks so the LLM receives coherent, topically-focused batches.
+- **Privacy-First** — All parsing runs 100% locally. Sensitive identifiers are scrubbed before any LLM call.
+- **Multi-Target Export** — One scan generates rules for 7+ AI agents and IDEs simultaneously.
+- **Rule Sandbox** — Generated rules are validated against your existing AST before being written to disk.
+- **CI/CD Lint Mode** — `codedna lint` exits non-zero on violations, making it a drop-in PR quality gate.
 
-## 📦 Installation
+---
+
+## Installation
 
 ```bash
 go install github.com/everglowlabs/codedna/cmd/codedna@latest
 ```
 
-## 📖 Usage
+**Requirements:** Go 1.21+
+
+---
+
+## Quick Start
 
 ```bash
-# Scan a project and generate rules
-codedna scan ./path/to/project
+# Scan the current directory and output codedna.json
+codedna scan .
+
+# Scan and generate rules for Cursor + GitHub Copilot
+codedna scan . --format cursor,copilot
+
+# Scan and export for every supported AI agent
+codedna scan . --format json,cursor,copilot,antigravity,claude,continue,windsurf,jetbrains
+
+# Generate a human-readable engineering standards document
+codedna scan . --format markdown
 ```
 
-## 🛡 Security & Privacy
+---
 
-CodeDNA is built with privacy in mind. It performs all AST traversal locally and scrubs sensitive identifiers before any LLM processing (if enabled).
+## CLI Reference
 
-## 📄 License
+### `codedna scan`
 
-Open Source under the MIT License.
+```
+Usage:
+  codedna scan [path] [flags]
+
+Flags:
+  -f, --format strings   Output format(s), comma-separated (default: json)
+                         Options: json, markdown, cursor, copilot,
+                                  antigravity, claude, continue, windsurf, jetbrains
+```
+
+Running `scan` launches the forensic TUI, walks the directory tree (respecting `.gitignore`), runs the extraction pipeline, and writes the selected output formats to disk.
+
+### `codedna lint`
+
+```
+Usage:
+  codedna lint [path] [flags]
+
+Flags:
+  -c, --config string   Path to codedna.json (default: "codedna.json")
+```
+
+Validates the current codebase against a previously generated `codedna.json`. Exits `0` on success, `1` on violations.
+
+---
+
+## Supported Languages & Output Formats
+
+### Languages
+
+| Language | Extensions | Status |
+| :--- | :--- | :--- |
+| Go | `.go` | ✅ Stable |
+| TypeScript | `.ts`, `.tsx` | ✅ Stable |
+| JavaScript | `.js` | ✅ Stable |
+| Python | `.py` | ✅ Stable |
+| Rust | `.rs` | ⬜ Planned |
+| Java | `.java` | ⬜ Planned |
+
+### Output Formats
+
+| Format Flag | Output Path | Used By |
+| :--- | :--- | :--- |
+| `json` | `codedna.json` | Lint command, custom tooling |
+| `markdown` | `CODEDNA_STANDARDS.md` | Human onboarding docs |
+| `cursor` | `.cursor/rules/*.mdc` | Cursor IDE |
+| `copilot` | `.github/instructions/*.instructions.md` | GitHub Copilot |
+| `antigravity` | `.agents/rules/*.md` | Antigravity |
+| `claude` | `CLAUDE.md` + `.claude/rules/*.md` | Claude Code |
+| `continue` | `.continue/rules/*.md` | Continue.dev |
+| `windsurf` | `.windsurf/rules/*.md` | Windsurf Cascade |
+| `jetbrains` | `.aiassistant/rules/*.md` | JetBrains AI |
+
+---
+
+## CI/CD Integration
+
+Add CodeDNA as a PR quality gate in GitHub Actions:
+
+```yaml
+name: CodeDNA Lint
+on: [pull_request]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+      - run: go install github.com/everglowlabs/codedna/cmd/codedna@latest
+      - run: codedna lint . --config codedna.json
+```
+
+Commit the `codedna.json` generated by your initial `scan` to the repository. The lint step will enforce those standards on every PR.
+
+---
+
+## How It Works
+
+```
+codedna scan ./
+      │
+      ▼
+  Scanner ──── respects .gitignore
+      │
+      ▼
+  Parser ───── Tree-sitter AST extraction (Go, TS, JS, Python)
+      │
+      ▼
+  Optimizer ── selects "Golden Samples" within LLM token limits
+      │
+      ▼
+  Cluster ──── chromem-go local embeddings group similar patterns
+      │
+      ▼
+  LLM ───────── Chain-of-Thought prompts → DNA_Schema (JSON)
+      │
+      ▼
+  Sandbox ──── validates rules against existing AST
+      │
+      ▼
+  Compilers ── writes rules for each target agent
+```
+
+The `codedna.json` produced at the end is the canonical source of truth. All other output formats are compiled from it.
+
+---
+
+## Security & Privacy
+
+- **Local-first parsing:** AST traversal and structural extraction happen 100% on your machine.
+- **Scrubbing:** String literals and high-entropy identifiers are removed before the LLM payload is constructed.
+- **Zero-retention headers:** API calls default to opt-out-of-training headers (`anthropic-no-log: true`, etc.).
+- **No source upload:** Only anonymized structural patterns reach the LLM — never raw source files.
+
+---
+
+## Architecture & Technical Details
+
+See [`CodeDNA_Implementation_Spec.md`](./CodeDNA_Implementation_Spec.md) for the full technical specification, including:
+- Internal package API reference
+- `DNA_Schema` JSON schema with field descriptions
+- Per-format output examples (Cursor, Copilot, Claude, Antigravity, etc.)
+- Full implementation roadmap and status
+
+---
+
+## License
+
+Open Source under the [MIT License](LICENSE).
