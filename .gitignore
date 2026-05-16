@@ -19,3 +19,4 @@ go.work
 
 # Project specific
 /codedna
+*_Spec.md
