@@ -52,6 +52,66 @@ func (m model) View() string {
 	header := titleStyle.Render("CodeDNA 🧬") + " " + subtleStyle.Render("v0.1.0") + " | " + infoStyle.Render(m.path)
 	header = headerStyle.Width(m.width - 2).Render(header)
 
+	if m.reviewing {
+		var bodyBuilder strings.Builder
+		std := m.tempDNA.Standards[m.reviewIdx]
+
+		if m.editingRule {
+			bodyBuilder.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#FF00FF")).Bold(true).Render("EDITING RULE DETAILS") + "\n")
+			bodyBuilder.WriteString(subtleStyle.Render("Modify rules below. Use Ctrl+S to save, Esc to cancel.") + "\n\n")
+			fmt.Fprintf(&bodyBuilder, "Title:    %s\n", std.Title)
+			fmt.Fprintf(&bodyBuilder, "Category: %s\n\n", std.Category)
+			bodyBuilder.WriteString(m.textarea.View() + "\n\n")
+			bodyBuilder.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#7D56F4")).Render("[Ctrl+S] Save changes    [Esc] Cancel") + "\n")
+		} else {
+			bodyBuilder.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#FFD700")).Bold(true).Render("NEW RULE DETECTED FOR REVIEW") + " (" + infoStyle.Render(fmt.Sprintf("%d/%d", m.reviewIdx+1, len(m.tempDNA.Standards))) + ")\n")
+			bodyBuilder.WriteString(subtleStyle.Render("─────────────────────────────────────────────────────────────") + "\n\n")
+			
+			fmt.Fprintf(&bodyBuilder, "Title:    %s\n", lipgloss.NewStyle().Bold(true).Render(std.Title))
+			fmt.Fprintf(&bodyBuilder, "Category: %s  |  Severity: %s\n", std.Category, std.Severity)
+			fmt.Fprintf(&bodyBuilder, "Rationale: %s\n\n", std.Rationale)
+			
+			bodyBuilder.WriteString(lipgloss.NewStyle().Bold(true).Render("Guidelines:") + "\n")
+			for _, r := range std.Rules {
+				fmt.Fprintf(&bodyBuilder, "  • %s\n", r)
+			}
+			bodyBuilder.WriteString("\n")
+			
+			if len(std.Samples) > 0 {
+				bodyBuilder.WriteString(lipgloss.NewStyle().Bold(true).Render("Sample Location:") + "\n")
+				fmt.Fprintf(&bodyBuilder, "  %s\n\n", subtleStyle.Render(std.Samples[0].FilePath))
+			}
+			
+			bodyBuilder.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#00FF00")).Render("[A] Accept") + "   " +
+				lipgloss.NewStyle().Foreground(lipgloss.Color("#FFCC00")).Render("[E] Edit") + "   " +
+				lipgloss.NewStyle().Foreground(lipgloss.Color("#FF0000")).Render("[R] Reject") + "   " +
+				lipgloss.NewStyle().Foreground(lipgloss.Color("#00BFFF")).Render("[S] Skip Remaining") + "\n")
+		}
+
+		bodyBox := focusedStyle.Width(m.width - 6).Height(m.height - 10).Render(bodyBuilder.String())
+
+		// Progress bar with fixed width
+		m.progress.Width = m.width / 2
+		percent := float64(m.reviewIdx) / float64(len(m.tempDNA.Standards))
+		progressBar := m.progress.ViewAs(percent)
+
+		statusView := footerStyle.Background(lipgloss.Color("#FF00FF")).Render("REVIEWING")
+
+		footer := lipgloss.JoinHorizontal(lipgloss.Center,
+			statusView,
+			"  ",
+			progressBar,
+			"  ",
+			subtleStyle.Render("press q to exit"),
+		)
+
+		return lipgloss.JoinVertical(lipgloss.Left,
+			header,
+			bodyBox,
+			footer,
+		)
+	}
+
 	// 2. Body (Two Columns)
 	sidebarWidth := m.width / 4
 	if sidebarWidth < 25 {

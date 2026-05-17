@@ -13,12 +13,14 @@ Every mature project implicitly enforces standards — how errors are wrapped, h
 
 ## Features
 
-- **AST-Powered Analysis** — Tree-sitter parses Go, TypeScript, JavaScript, and Python at the syntax tree level. No regex heuristics.
+- **AST-Powered Analysis** — Tree-sitter parses Go, TypeScript, JavaScript, Python, Rust, and Java at the syntax tree level. No regex heuristics.
 - **Semantic Clustering** — Local vector embeddings (`chromem-go`) group similar code blocks so the LLM receives coherent, topically-focused batches.
-- **Privacy-First** — All parsing runs 100% locally. Sensitive identifiers are scrubbed before any LLM call.
+- **Offline & Local LLM Support** — Run completely offline and air-gapped using local reasoning providers like Ollama and LM Studio.
+- **Privacy-First** — All parsing runs 100% locally. Active string literal scrubbing (`--scrub-strings`) sanitizes payloads before reasoning.
+- **Interactive Rule Editor** — Review, edit, or reject synthesized rules directly inside the fullscreen BubbleTea terminal dashboard.
 - **Multi-Target Export** — One scan generates rules for 7+ AI agents and IDEs simultaneously.
 - **Rule Sandbox** — Generated rules are validated against your existing AST before being written to disk.
-- **CI/CD Lint Mode** — `codedna lint` exits non-zero on violations, making it a drop-in PR quality gate.
+- **CI/CD Lint Mode** — `codedna lint` exits non-zero on violations, offering configurable severity gates (`--fail-on`).
 
 ---
 
@@ -59,12 +61,17 @@ Usage:
   codedna scan [path] [flags]
 
 Flags:
-  -f, --format strings   Output format(s), comma-separated (default: json)
+  -f, --format strings   Output format(s), comma-separated (default: [json])
                          Options: json, markdown, cursor, copilot,
                                   antigravity, claude, continue, windsurf, jetbrains
+  -p, --provider string  LLM reasoning provider: anthropic, openai, gemini,
+                         ollama, lmstudio (default: "anthropic")
+  -m, --model string     LLM model name (default: "claude-3-5-sonnet")
+      --scrub-strings    Scrub string literals from AST blocks before reasoning for privacy
+      --no-interactive   Disable the interactive TUI rule review session
 ```
 
-Running `scan` launches the forensic TUI, walks the directory tree (respecting `.gitignore`), runs the extraction pipeline, and writes the selected output formats to disk.
+Running `scan` launches the forensic TUI, walks the directory tree (respecting `.gitignore`), runs the extraction pipeline, prompts for interactive rule reviews, and writes the selected output formats to disk.
 
 ### `codedna lint`
 
@@ -73,10 +80,12 @@ Usage:
   codedna lint [path] [flags]
 
 Flags:
-  -c, --config string   Path to codedna.json (default: "codedna.json")
+  -c, --config string    Path to codedna.json (default: "codedna.json")
+      --fail-on string   Severity threshold to fail the build: error, warning, info
+                         (default: "warning")
 ```
 
-Validates the current codebase against a previously generated `codedna.json`. Exits `0` on success, `1` on violations.
+Validates the current codebase against a previously generated `codedna.json`. Exits `0` on success, or `1` on violations that meet or exceed the `--fail-on` threshold.
 
 ---
 
@@ -90,8 +99,8 @@ Validates the current codebase against a previously generated `codedna.json`. Ex
 | TypeScript | `.ts`, `.tsx` | ✅ Stable |
 | JavaScript | `.js` | ✅ Stable |
 | Python | `.py` | ✅ Stable |
-| Rust | `.rs` | ⬜ Planned |
-| Java | `.java` | ⬜ Planned |
+| Rust | `.rs` | ✅ Stable |
+| Java | `.java` | ✅ Stable |
 
 ### Output Formats
 
@@ -142,7 +151,7 @@ codedna scan ./
   Scanner ──── respects .gitignore
       │
       ▼
-  Parser ───── Tree-sitter AST extraction (Go, TS, JS, Python)
+  Parser ───── Tree-sitter AST extraction (Go, TS, JS, Python, Rust, Java)
       │
       ▼
   Optimizer ── selects "Golden Samples" within LLM token limits

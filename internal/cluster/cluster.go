@@ -73,10 +73,14 @@ func (cm *ClusterManager) GroupByPattern(
 			continue
 		}
 
-		// Use the first few lines as a "pattern" key if we find similar ones
-		// In a real implementation, we'd use k-means or similar on embeddings.
-		// For now, we'll query for similar blocks and group them.
-		similar, err := cm.FindSimilar(ctx, block.Content, 5)
+		limit := 5
+		if len(blocks) < limit {
+			limit = len(blocks)
+		}
+		if limit == 0 {
+			continue
+		}
+		similar, err := cm.FindSimilar(ctx, block.Content, limit)
 		if err != nil {
 			continue
 		}

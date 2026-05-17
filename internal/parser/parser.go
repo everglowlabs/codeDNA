@@ -7,8 +7,10 @@ import (
 
 	sitter "github.com/smacker/go-tree-sitter"
 	"github.com/smacker/go-tree-sitter/golang"
+	"github.com/smacker/go-tree-sitter/java"
 	"github.com/smacker/go-tree-sitter/javascript"
 	"github.com/smacker/go-tree-sitter/python"
+	"github.com/smacker/go-tree-sitter/rust"
 	"github.com/smacker/go-tree-sitter/typescript/typescript"
 )
 
@@ -52,6 +54,25 @@ func NewParser(ext string) *Parser {
 				(function_declaration) @func
 				(method_definition) @method
 				(class_declaration) @class
+			`,
+		}
+	case ".rs":
+		return &Parser{
+			Language: rust.GetLanguage(),
+			Query: `
+				(function_item) @func
+				(struct_item) @class
+				(impl_item) @class
+				(trait_item) @interface
+			`,
+		}
+	case ".java":
+		return &Parser{
+			Language: java.GetLanguage(),
+			Query: `
+				(method_declaration) @method
+				(class_declaration) @class
+				(interface_declaration) @interface
 			`,
 		}
 	default:

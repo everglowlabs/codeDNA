@@ -15,6 +15,12 @@ import (
 var scanCmd = &cobra.Command{
 	Use:   "scan [path]",
 	Short: "Scan a directory for patterns",
+	Long: `Scan a directory to forensically extract code patterns.
+Supports cloud providers (anthropic, openai, gemini) or fully offline/local operations (ollama, lmstudio).
+
+Recommended local models:
+- Ollama:     codellama:13b, mistral:7b
+- LM Studio:  mistral-7b, codellama-7b`,
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		path := "."
@@ -22,7 +28,12 @@ var scanCmd = &cobra.Command{
 			path = args[0]
 		}
 
-		p := tea.NewProgram(tui.InitialModel(path))
+		noInteractive, _ := cmd.Flags().GetBool("no-interactive")
+		provider, _ := cmd.Flags().GetString("provider")
+		modelName, _ := cmd.Flags().GetString("model")
+		scrubStrings, _ := cmd.Flags().GetBool("scrub-strings")
+
+		p := tea.NewProgram(tui.InitialModel(path, noInteractive, provider, modelName, scrubStrings))
 		m, err := p.Run()
 		if err != nil {
 			fmt.Printf("Error running TUI: %v", err)
@@ -101,5 +112,9 @@ func exportDNA(dna schema.DNA_Schema, formats []string) {
 
 func init() {
 	scanCmd.Flags().StringSliceP("format", "f", []string{"json"}, "Output formats (json, markdown, cursor, copilot, antigravity, claude, continue, windsurf, jetbrains)")
+	scanCmd.Flags().StringP("provider", "p", "anthropic", "LLM reasoning provider (anthropic, openai, gemini, ollama, lmstudio)")
+	scanCmd.Flags().StringP("model", "m", "claude-3-5-sonnet", "LLM model (e.g. claude-3-5-sonnet, gpt-4o, codellama, mistral)")
+	scanCmd.Flags().Bool("scrub-strings", false, "Scrub string literals from AST blocks before reasoning for privacy")
+	scanCmd.Flags().Bool("no-interactive", false, "Disable the interactive TUI rule review session")
 	rootCmd.AddCommand(scanCmd)
 }

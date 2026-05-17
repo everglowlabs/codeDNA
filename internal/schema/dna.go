@@ -13,6 +13,7 @@ type DNA_Schema struct {
 // Standard defines a specific engineering category or rule.
 type Standard struct {
 	ID          string    `json:"id"`
+	Severity    string    `json:"severity"` // "error", "warning", "info"
 	Category    string    `json:"category"` // e.g., "Error Handling", "Logging", "Testing"
 	Title       string    `json:"title"`
 	Description string    `json:"description"`

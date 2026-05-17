@@ -30,7 +30,7 @@ CodeDNA ingests an existing codebase, performs deep AST-level analysis, and prod
 
 | Capability | Description |
 | :--- | :--- |
-| **AST-Powered Analysis** | Tree-sitter parses Go, TypeScript, JavaScript, and Python at the syntax tree level — no regex heuristics |
+| **AST-Powered Analysis** | Tree-sitter parses Go, TypeScript, JavaScript, Python, Rust, and Java at the syntax tree level — no regex heuristics |
 | **Semantic Clustering** | Local vector embeddings group similar code blocks (e.g., all HTTP handlers, all logger init patterns) |
 | **Privacy-First** | All parsing is 100% local; scrubbing removes secrets before any LLM call |
 | **Multi-Target Export** | One scan → rules for 7+ AI agents and IDEs simultaneously |
@@ -117,7 +117,7 @@ scanner.Scan(ignoreList) → []string (file paths)
 Wraps Tree-sitter for polyglot AST extraction. Each file extension maps to a language-specific grammar and query set.
 
 ```go
-parser.NewParser(ext) → *Parser   // ext: ".go", ".ts", ".tsx", ".js", ".py"
+parser.NewParser(ext) → *Parser   // ext: ".go", ".ts", ".tsx", ".js", ".py", ".rs", ".java"
 parser.ExtractBlocks(path) → []CodeBlock
 ```
 
@@ -129,6 +129,8 @@ parser.ExtractBlocks(path) → []CodeBlock
 | **TypeScript** | `.ts`, `.tsx` | `function_declaration`, `method_definition`, `interface_declaration`, `class_declaration` |
 | **JavaScript** | `.js` | `function_declaration`, `method_definition`, `class_declaration` |
 | **Python** | `.py` | `function_definition`, `class_definition` |
+| **Rust** | `.rs` | `function_item`, `struct_item`, `impl_item`, `trait_item` |
+| **Java** | `.java` | `method_declaration`, `class_declaration`, `interface_declaration` |
 
 Each `CodeBlock` carries:
 - `Content` — the full source text of the construct
@@ -239,6 +241,7 @@ The `codedna.json` file is the source of truth for all compilers and the lint co
 | `version` | `string` | Schema version |
 | `generated_at` | `time.Time` | ISO 8601 timestamp |
 | `standards[].id` | `string` | Unique standard identifier |
+| `standards[].severity` | `string` | Severity level of the standard (`"error"`, `"warning"`, `"info"`) |
 | `standards[].category` | `string` | e.g., `"Error Handling"`, `"Logging"`, `"Testing"` |
 | `standards[].title` | `string` | Short, human-readable name (used as filename) |
 | `standards[].description` | `string` | One-sentence summary |
@@ -271,6 +274,11 @@ Flags:
   -f, --format strings   Output formats (default [json])
                          Choices: json, markdown, cursor, copilot,
                          antigravity, claude, continue, windsurf, jetbrains
+  -p, --provider string  LLM reasoning provider: anthropic, openai, gemini,
+                         ollama, lmstudio (default: "anthropic")
+  -m, --model string     LLM model name (default: "claude-3-5-sonnet")
+      --scrub-strings    Scrub string literals from AST blocks before reasoning for privacy
+      --no-interactive   Disable the interactive TUI rule review session
 
 Examples:
   # Scan current directory, output JSON only (default)
@@ -294,25 +302,31 @@ Examples:
 4. The optimizer selects golden samples within token limits.
 5. The cluster engine groups semantically similar blocks.
 6. The LLM reasoning pipeline (Chain-of-Thought) generates `Standard` entries.
-7. The sandbox validates each rule against the existing AST.
-8. Compilers write the selected output formats to disk.
+7. The TUI enters Interactive Rule Editor mode (unless `--no-interactive` is passed), letting the user accept, reject, or edit rules inline.
+8. The sandbox validates each rule against the existing AST.
+9. Compilers write the selected output formats to disk.
 
 ---
 
 ### `codedna lint`
 
-Checks that the current codebase adheres to a previously generated `codedna.json`. Designed for CI/CD pipelines.
+Refined for severity-aware exit criteria to match premium enterprise CI/CD gates.
 
 ```
 Usage:
   codedna lint [path] [flags]
 
 Flags:
-  -c, --config string   Path to codedna.json (default "codedna.json")
+  -c, --config string    Path to codedna.json (default "codedna.json")
+      --fail-on string   Severity threshold to fail the build: error, warning, info
+                         (default "warning")
 
 Examples:
   # Lint current directory against codedna.json in the repo root
   codedna lint .
+
+  # Fail build only on critical error violations (warnings/info become non-blocking suggestions)
+  codedna lint . --fail-on error
 
   # Lint with a custom config path
   codedna lint . --config ./standards/codedna.json
@@ -497,7 +511,7 @@ The terminal UI is built with BubbleTea and Lipgloss, designed to feel like a hi
 ### Phase 1 — Foundation ✅ COMPLETE
 
 - [x] **CLI/TUI Skeleton** — Cobra command routing (`scan`, `lint`) with BubbleTea real-time file walker
-- [x] **Tree-sitter Integration** — Go, TypeScript, JavaScript, and Python parsers with AST query extraction
+- [x] **Tree-sitter Integration** — Go, TypeScript, JavaScript, Python, Rust, and Java parsers with AST query extraction
 - [x] **Filter Logic** — `.gitignore`-aware file scanner via `internal/scanner`
 
 ### Phase 2 — Intelligence & Extraction ✅ COMPLETE
@@ -512,20 +526,20 @@ The terminal UI is built with BubbleTea and Lipgloss, designed to feel like a hi
 - [x] **Multi-Format Compilers** — 9 compilers: JSON, Markdown, Cursor, Copilot, Antigravity, Claude, Continue, Windsurf, JetBrains
 - [x] **CI/CD Integration** — `codedna lint` command with non-zero exit on violations
 
-### Phase 4 — Local-First Intelligence 🔄 NEXT
+### Phase 4 — Local-First Intelligence ✅ COMPLETE
 
-- [ ] **Local LLM Support** — `--provider` flag supporting Ollama and LM Studio for fully offline operation
-- [ ] **Interactive Rule Editor** — In-TUI accept / reject / edit flow before rules are written to disk
-- [ ] **Expanded Language Support** — Rust (`.rs`) and Java (`.java`) Tree-sitter grammars
-- [ ] **`--scrub-strings` flag** — Explicit opt-in to strip all string literals from the LLM payload
-- [ ] **Severity Levels** — Classify each rule as `error`, `warning`, or `info` in the schema and lint output
+- [x] **Local LLM Support** — `--provider` flag supporting Ollama and LM Studio for fully offline operation
+- [x] **Interactive Rule Editor** — In-TUI accept / reject / edit flow before rules are written to disk
+- [x] **Expanded Language Support** — Rust (`.rs`) and Java (`.java`) Tree-sitter grammars
+- [x] **`--scrub-strings` flag** — Explicit opt-in to strip all string literals from the LLM payload
+- [x] **Severity Levels** — Classify each rule as `error`, `warning`, or `info` in the schema and lint output
 
 ### Phase 5 — Developer Experience 📋 PLANNED
 
 - [ ] **Semantic Rule Diffing** — `codedna diff` compares two `codedna.json` snapshots and reports standard drift
 - [ ] **Watch Mode** — `codedna watch` continuously lints files on save during active development
 - [ ] **`codedna init`** — Guided setup wizard that detects the project language stack and pre-configures the scan
-- [ ] **Rule Severity in CI** — `--fail-on warning` flag to make the lint step configurable by severity threshold
+- [x] **Rule Severity in CI** — `--fail-on warning` flag to make the lint step configurable by severity threshold
 - [ ] **Structured Lint Output** — `--output json` flag on `lint` for machine-readable violation reports (parseable by CI dashboards)
 
 ### Phase 6 — Enterprise & Ecosystem 🔭 FUTURE
@@ -544,8 +558,8 @@ The terminal UI is built with BubbleTea and Lipgloss, designed to feel like a hi
 | TypeScript | `.ts`, `.tsx` | ✅ | ✅ | Stable |
 | JavaScript | `.js` | ✅ | ✅ | Stable |
 | Python | `.py` | ✅ | ✅ | Stable |
-| Rust | `.rs` | ⬜ | ⬜ | Phase 4 |
-| Java | `.java` | ⬜ | ⬜ | Phase 4 |
+| Rust | `.rs` | ✅ | ✅ | Stable (Phase 4) |
+| Java | `.java` | ✅ | ✅ | Stable (Phase 4) |
 | Ruby | `.rb` | ⬜ | ⬜ | Phase 6 |
 | C/C++ | `.c`, `.cpp` | ⬜ | ⬜ | Phase 6 |
 

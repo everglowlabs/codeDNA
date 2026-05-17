@@ -27,7 +27,7 @@ func (f *Filter) ShouldIgnore(path string) bool {
 func (f *Filter) IsSupported(path string) bool {
 	ext := filepath.Ext(path)
 	switch ext {
-	case ".go", ".ts", ".tsx", ".py", ".js":
+	case ".go", ".ts", ".tsx", ".py", ".js", ".rs", ".java":
 		return true
 	}
 	return false
